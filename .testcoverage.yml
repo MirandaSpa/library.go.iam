@@ -1,0 +1,4 @@
+# go-test-coverage (vladopajic/go-test-coverage). CI fails below this threshold.
+profile: cover.out
+threshold:
+  total: 70     # organization rule: at least 70% of the code

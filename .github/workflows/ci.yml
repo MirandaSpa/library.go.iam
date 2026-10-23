@@ -1,0 +1,50 @@
+# CI for the Go library: static analysis (golangci-lint + govulncheck) and tests with coverage (>= 70%).
+# Actions are pinned by commit SHA (comment = version) to avoid moved tags.
+# Go is NOT pinned: CI uses the latest stable release on purpose.
+# A library publishes no image: consumers pin it with a git tag (vX.Y.Z).
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GOPRIVATE: github.com/MirandaSpa/*
+
+jobs:
+  lint:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          check-latest: true
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  test:
+    name: Tests and coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          check-latest: true
+      - name: Test
+        run: go test -race -covermode=atomic -coverprofile=cover.out ./...
+      - name: Coverage threshold
+        uses: vladopajic/go-test-coverage@f94bcf0d6b9fa5fb8b783830b22648f6c17475e2 # v2.19.0
+        with:
+          config: ./.testcoverage.yml
