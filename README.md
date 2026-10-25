@@ -48,6 +48,53 @@ En modo `shadow` **nunca rechaza**: registra "iam guard: denied ..." y deja pasa
 
 > **Importante:** `X-Usuario-Id` solo es confiable si lo fija el Ingress con el autorizador de `iam` (`auth-url` + `auth-response-headers`). Mientras el servicio no esté detrás de ese `auth-url`, el cliente puede falsificarlo; adopta el guard en `shadow` hasta entonces.
 
+## Registrar el manifiesto del servicio
+
+Cada servicio declara sus permisos y sus rutas en un `permissions.yaml` en la raíz de su repo y los registra en `iam` al arrancar. Así `iam` sabe qué permiso exige cada ruta (para el `auth-url` del Ingress y para el legacy), sin cargas manuales. Registrar un manifiesto no da permisos a nadie: solo agrega al catálogo, y las rutas del servicio se reemplazan en cada registro.
+
+```yaml
+service: products            # primer segmento de todos sus permisos
+permissions:
+  - id: products:product:list      # servicio:recurso:accion, en inglés y minúsculas
+    label: Ver productos           # lo que lee quien administra
+    description: Permite ver la lista de productos.
+    scope: global                  # branch (por defecto) | global
+    audit: denied                  # denied (por defecto) | always
+    kind: entry                    # entry (por defecto) | internal
+routes:
+  - method: GET
+    path: /api/v2/internal_product/products     # ruta completa; {id} para lo que varía
+    permission: products:product:list
+  - method: GET
+    path: /api/v2/internal_product/products/test
+    public: true                                # cualquier token válido, sin permiso
+```
+
+Al arrancar el servicio:
+
+```go
+manifest, err := manifestfile.Load("permissions.yaml") // github.com/MirandaSpa/library.go.iam/manifestfile
+if err != nil { log.Fatal(err) }                       // un manifiesto inválido es un error de programación
+client, _ := iam.New(os.Getenv("IAM_URL"))
+_, _ = client.RegisterInBackground(ctx, manifest, log.Printf) // no frena el arranque; reintenta hasta que iam responda
+```
+
+`RegisterInBackground` reintenta con espera creciente (de 1 a 30 segundos) hasta que `iam` responde o `ctx` termina. El archivo se empaqueta en la imagen (en el `Dockerfile`, copiar `permissions.yaml` junto al binario).
+
+### Test de CI: que el manifiesto no se desalinee del código
+
+```go
+func TestManifestMatchesRoutes(t *testing.T) {
+	manifest, err := manifestfile.Load("permissions.yaml")
+	require.NoError(t, err)
+	engine := setupRouter() // el mismo router que usa el servicio
+	problems := iam.CheckRoutes(manifest, ginmw.Routes(engine), iam.RouteKey{Method: "GET", Path: "/healthz"})
+	assert.Empty(t, problems)
+}
+```
+
+Falla si el servicio sirve una ruta que el manifiesto no declara, o si el manifiesto declara una ruta que el servicio no sirve. Los parámetros se comparan por posición (`:id` de gin y `{id}` del manifiesto son el mismo segmento). `manifestfile` es un paquete aparte porque necesita una librería de YAML (`go.yaml.in/yaml/v3`, de la organización oficial `yaml`); el paquete `iam` sigue usando solo la biblioteca estándar.
+
 ## Desarrollo
 
 | Comando | Qué hace |
