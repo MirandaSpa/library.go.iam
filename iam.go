@@ -28,6 +28,8 @@ const (
 type Client struct {
 	baseURL string
 	http    *http.Client
+	// retryWait is the first wait of RegisterInBackground; zero means one second (tests shorten it).
+	retryWait time.Duration
 }
 
 // Option configures a Client.
@@ -35,6 +37,10 @@ type Option func(*Client)
 
 // WithHTTPClient replaces the HTTP client (transport, tracing, tests).
 func WithHTTPClient(h *http.Client) Option { return func(c *Client) { c.http = h } }
+
+// WithRetryWait sets the first wait of RegisterInBackground between attempts (one
+// second by default); it doubles after each failure up to 30 seconds.
+func WithRetryWait(d time.Duration) Option { return func(c *Client) { c.retryWait = d } }
 
 // New builds a client. baseURL is the service base path without the /internal
 // segment, e.g. http://iam.dev.svc.cluster.local:8080/api/v2/iam.

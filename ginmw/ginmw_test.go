@@ -53,3 +53,23 @@ func TestRequirePermission(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, run(checkerStub{err: errors.New("down")}, iam.Strict, "u1").Code)
 	assert.Equal(t, http.StatusNoContent, run(checkerStub{}, iam.Shadow, "u1").Code, "shadow lets a denial through")
 }
+
+func TestRoutes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	g := r.Group("/api/v2/x")
+	g.GET("", func(*gin.Context) {})
+	g.POST("/:id/print", func(*gin.Context) {})
+
+	routes := ginmw.Routes(r)
+
+	assert.ElementsMatch(t, []iam.RouteKey{
+		{Method: "GET", Path: "/api/v2/x"},
+		{Method: "POST", Path: "/api/v2/x/:id/print"},
+	}, routes)
+	m := iam.Manifest{Service: "x", Permissions: []iam.ManifestPermission{{ID: "x:a:b", Label: "L"}}, Routes: []iam.ManifestRoute{
+		{Method: "GET", Path: "/api/v2/x", Permission: "x:a:b"},
+		{Method: "POST", Path: "/api/v2/x/{id}/print", Permission: "x:a:b"},
+	}}
+	assert.Empty(t, iam.CheckRoutes(m, routes), "gin :id and manifest {id} are the same segment")
+}
