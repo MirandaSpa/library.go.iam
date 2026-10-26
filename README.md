@@ -2,7 +2,7 @@
 
 Cliente Go del servicio de permisos [`backend.k8s.iam`](https://github.com/MirandaSpa/backend.k8s.iam) (ERM-807). Sirve para preguntar "¿puede este usuario hacer X en la sucursal Y?", "¿quién puede?" y para proteger rutas HTTP con un permiso.
 
-- Solo usa la librería estándar (el adaptador `ginmw` usa `gin`, que ya usan los servicios antiguos).
+- Solo usa la librería estándar (los adaptadores `ginmw` y `chimw` usan `gin` y `chi`, que ya usan los servicios).
 - **No tiene caché**: cada llamada consulta a `iam`. Si `iam` no responde, `Can` devuelve error (nunca `false`): quien llama decide qué hacer.
 - Los errores no incluyen el cuerpo de la respuesta ni datos personales; los logs llevan solo IDs internos.
 - Requiere la versión más reciente de Go: la regla de la organización es compilar siempre con la última versión estable.
@@ -92,6 +92,8 @@ func TestManifestMatchesRoutes(t *testing.T) {
 	assert.Empty(t, problems)
 }
 ```
+
+Con chi el mismo test usa `chimw.Routes(router)` (recorre también los sub-routers montados) en lugar de `ginmw.Routes`.
 
 Falla si el servicio sirve una ruta que el manifiesto no declara, o si el manifiesto declara una ruta que el servicio no sirve. Los parámetros se comparan por posición (`:id` de gin y `{id}` del manifiesto son el mismo segmento). `manifestfile` es un paquete aparte porque necesita una librería de YAML (`go.yaml.in/yaml/v3`, de la organización oficial `yaml`); el paquete `iam` sigue usando solo la biblioteca estándar.
 
