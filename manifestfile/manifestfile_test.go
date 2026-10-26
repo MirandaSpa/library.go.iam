@@ -55,8 +55,8 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("a manifest that does not validate is an error", func(t *testing.T) {
-		_, err := manifestfile.Parse([]byte("service: products\npermissions:\n  - id: other:a:b\n    label: X\n"))
-		require.ErrorContains(t, err, "must start with the service")
+		_, err := manifestfile.Parse([]byte("service: products\npermissions:\n  - id: other:a:b\n    label: \" \"\n"))
+		require.ErrorContains(t, err, "needs a label")
 	})
 }
 

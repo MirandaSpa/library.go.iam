@@ -33,6 +33,14 @@ func validManifest() iam.Manifest {
 func TestManifestValidate(t *testing.T) {
 	require.NoError(t, validManifest().Validate())
 
+	t.Run("the permissions of a service can belong to an area shared with other services", func(t *testing.T) {
+		m := validManifest()
+		m.Service = "storage-stock"
+		m.Permissions = []iam.ManifestPermission{{ID: "storage:stock:adjust", Label: "Ajustar el stock", Scope: "branch"}}
+		m.Routes = []iam.ManifestRoute{{Method: "PUT", Path: "/api/v2/storage/stock", Permission: "storage:stock:adjust"}}
+		require.NoError(t, m.Validate())
+	})
+
 	tests := []struct {
 		name   string
 		change func(m *iam.Manifest)
@@ -40,9 +48,8 @@ func TestManifestValidate(t *testing.T) {
 	}{
 		{"service with uppercase", func(m *iam.Manifest) { m.Service = "Products" }, "service"},
 		{"empty service", func(m *iam.Manifest) { m.Service = "" }, "service"},
-		{"permission with two segments", func(m *iam.Manifest) { m.Permissions[0].ID = "products:list" }, "service:resource:action"},
+		{"permission with two segments", func(m *iam.Manifest) { m.Permissions[0].ID = "products:list" }, "area:resource:action"},
 		{"permission with uppercase", func(m *iam.Manifest) { m.Permissions[0].ID = "products:Product:list" }, "lowercase"},
-		{"permission of another service", func(m *iam.Manifest) { m.Permissions[0].ID = "sales:product:list" }, "must start with the service"},
 		{"permission declared twice", func(m *iam.Manifest) { m.Permissions[1].ID = "products:product:list" }, "declared twice"},
 		{"permission without label", func(m *iam.Manifest) { m.Permissions[0].Label = " " }, "needs a label"},
 		{"bad scope", func(m *iam.Manifest) { m.Permissions[0].Scope = "region" }, "scope"},
