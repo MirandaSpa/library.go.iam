@@ -28,7 +28,7 @@ type Manifest struct {
 }
 
 // ManifestPermission is one permission of the catalog. The id is
-// service:resource:action, in English; the label is what administrators read.
+// area:resource:action, in English; the label is what administrators read.
 type ManifestPermission struct {
 	ID          string `yaml:"id" json:"id"`
 	Label       string `yaml:"label" json:"label"`
@@ -67,11 +67,8 @@ func (m Manifest) Validate() error {
 	declared := map[string]bool{}
 	for _, p := range m.Permissions {
 		parts := strings.Split(p.ID, ":")
-		switch {
-		case len(parts) != 3 || !allSegments(parts):
-			add("permission %q must be service:resource:action, in lowercase", p.ID)
-		case parts[0] != m.Service:
-			add("permission %q must start with the service %q", p.ID, m.Service)
+		if len(parts) != 3 || !allSegments(parts) {
+			add("permission %q must be area:resource:action, in lowercase", p.ID)
 		}
 		if declared[p.ID] {
 			add("permission %q is declared twice", p.ID)

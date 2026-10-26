@@ -53,9 +53,9 @@ En modo `shadow` **nunca rechaza**: registra "iam guard: denied ..." y deja pasa
 Cada servicio declara sus permisos y sus rutas en un `permissions.yaml` en la raíz de su repo y los registra en `iam` al arrancar. Así `iam` sabe qué permiso exige cada ruta (para el `auth-url` del Ingress y para el legacy), sin cargas manuales. Registrar un manifiesto no da permisos a nadie: solo agrega al catálogo, y las rutas del servicio se reemplazan en cada registro.
 
 ```yaml
-service: products            # primer segmento de todos sus permisos
+service: products            # nombre del servicio (identifica sus rutas en iam)
 permissions:
-  - id: products:product:list      # servicio:recurso:accion, en inglés y minúsculas
+  - id: products:product:list      # area:recurso:accion, en inglés y minúsculas; el área puede agrupar varios servicios
     label: Ver productos           # lo que lee quien administra
     description: Permite ver la lista de productos.
     scope: global                  # branch (por defecto) | global
